@@ -196,3 +196,203 @@ pub fn switch_to(name: &str) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_merge_simple_objects() {
+        let base = json!({
+            "key1": "value1",
+            "key2": "value2"
+        });
+        let overlay = json!({
+            "key2": "overridden",
+            "key3": "value3"
+        });
+
+        let result = merge_json(&base, &overlay);
+
+        assert_eq!(result["key1"], "value1");
+        assert_eq!(result["key2"], "overridden");
+        assert_eq!(result["key3"], "value3");
+    }
+
+    #[test]
+    fn test_merge_nested_objects() {
+        let base = json!({
+            "env": {
+                "API_KEY": "sk-base",
+                "TIMEOUT": 30
+            },
+            "permissions": {
+                "allow": ["read"]
+            }
+        });
+        let overlay = json!({
+            "env": {
+                "API_KEY": "sk-provider",
+                "BASE_URL": "https://api.example.com"
+            }
+        });
+
+        let result = merge_json(&base, &overlay);
+
+        // env should be merged
+        assert_eq!(result["env"]["API_KEY"], "sk-provider");
+        assert_eq!(result["env"]["TIMEOUT"], 30);
+        assert_eq!(result["env"]["BASE_URL"], "https://api.example.com");
+        // permissions should be preserved from base
+        assert_eq!(result["permissions"]["allow"], json!(["read"]));
+    }
+
+    #[test]
+    fn test_merge_overlay_replaces_non_object() {
+        let base = json!({
+            "settings": ["a", "b", "c"]
+        });
+        let overlay = json!({
+            "settings": ["x", "y"]
+        });
+
+        let result = merge_json(&base, &overlay);
+
+        // Arrays are not merged, overlay replaces
+        assert_eq!(result["settings"], json!(["x", "y"]));
+    }
+
+    #[test]
+    fn test_merge_deep_nesting() {
+        let base = json!({
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "deep_key": "deep_value",
+                        "another": "kept"
+                    }
+                }
+            }
+        });
+        let overlay = json!({
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "deep_key": "overridden"
+                    },
+                    "new_key": "new_value"
+                }
+            }
+        });
+
+        let result = merge_json(&base, &overlay);
+
+        assert_eq!(result["level1"]["level2"]["level3"]["deep_key"], "overridden");
+        assert_eq!(result["level1"]["level2"]["level3"]["another"], "kept");
+        assert_eq!(result["level1"]["level2"]["new_key"], "new_value");
+    }
+
+    #[test]
+    fn test_merge_empty_overlay() {
+        let base = json!({
+            "key": "value"
+        });
+        let overlay = json!({});
+
+        let result = merge_json(&base, &overlay);
+
+        assert_eq!(result["key"], "value");
+    }
+
+    #[test]
+    fn test_merge_empty_base() {
+        let base = json!({});
+        let overlay = json!({
+            "key": "value"
+        });
+
+        let result = merge_json(&base, &overlay);
+
+        assert_eq!(result["key"], "value");
+    }
+
+    #[test]
+    fn test_merge_primitive_override() {
+        let base = json!({
+            "value": "string"
+        });
+        let overlay = json!({
+            "value": 42
+        });
+
+        let result = merge_json(&base, &overlay);
+
+        assert_eq!(result["value"], 42);
+    }
+
+    #[test]
+    fn test_merge_null_values() {
+        let base = json!({
+            "key1": "value1",
+            "key2": null
+        });
+        let overlay = json!({
+            "key2": "not_null",
+            "key3": null
+        });
+
+        let result = merge_json(&base, &overlay);
+
+        assert_eq!(result["key1"], "value1");
+        assert_eq!(result["key2"], "not_null");
+        assert_eq!(result["key3"], Value::Null);
+    }
+
+    #[test]
+    fn test_config_path_format() {
+        let result = config_path("qwen").unwrap();
+        assert!(result.ends_with("qwen.json"));
+    }
+
+    #[test]
+    fn test_base_config_path_format() {
+        let result = base_config_path().unwrap();
+        assert!(result.ends_with("base.json"));
+    }
+
+    #[test]
+    fn test_merge_claude_settings_realistic() {
+        // Realistic Claude Code settings scenario
+        let base = json!({
+            "env": {
+                "ANTHROPIC_API_KEY": "sk-ant-xxxx"
+            },
+            "permissions": {
+                "allow": ["Bash(npm run:*)", "Bash(cargo:*)"],
+                "deny": []
+            },
+            "enableAllMcpServers": true
+        });
+        let provider = json!({
+            "env": {
+                "ANTHROPIC_BASE_URL": "https://api.deepseek.com",
+                "ANTHROPIC_API_KEY": "sk-deepseek-xxxx"
+            },
+            "model": "claude-3-5-sonnet"
+        });
+
+        let result = merge_json(&base, &provider);
+
+        // Provider API key overrides base
+        assert_eq!(result["env"]["ANTHROPIC_API_KEY"], "sk-deepseek-xxxx");
+        // Provider adds BASE_URL
+        assert_eq!(result["env"]["ANTHROPIC_BASE_URL"], "https://api.deepseek.com");
+        // Base permissions preserved
+        assert_eq!(result["permissions"]["allow"], json!(["Bash(npm run:*)", "Bash(cargo:*)"]));
+        // Provider adds model
+        assert_eq!(result["model"], "claude-3-5-sonnet");
+        // Base setting preserved
+        assert_eq!(result["enableAllMcpServers"], true);
+    }
+}
