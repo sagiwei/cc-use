@@ -21,6 +21,11 @@ pub enum Command {
         /// Name for the new configuration
         name: String,
     },
+    /// Manage base configuration (shared across all configs)
+    Base {
+        #[command(subcommand)]
+        action: Option<BaseAction>,
+    },
     /// List all configurations
     Ls,
     /// Remove a configuration
@@ -28,7 +33,7 @@ pub enum Command {
         /// Name of the configuration to remove
         name: String,
     },
-    /// Show configuration content
+    /// Show configuration content (merged with base if exists)
     Show {
         /// Name of the configuration (defaults to current)
         name: Option<String>,
@@ -38,4 +43,12 @@ pub enum Command {
         /// Name of the configuration to edit
         name: String,
     },
+}
+
+#[derive(Subcommand)]
+pub enum BaseAction {
+    /// Show base configuration
+    Show,
+    /// Remove base configuration
+    Rm,
 }

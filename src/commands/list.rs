@@ -10,6 +10,11 @@ pub fn run() -> Result<()> {
         return Ok(());
     }
 
+    // Show base config status
+    if config::base_config_exists()? {
+        println!("  {} {}", "base".cyan(), "(shared)".cyan());
+    }
+
     let current = config::current_config()?;
 
     for name in &configs {

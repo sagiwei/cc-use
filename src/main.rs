@@ -7,7 +7,7 @@ use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 
-use cli::{Cli, Command};
+use cli::{BaseAction, Cli, Command};
 
 fn main() {
     if let Err(e) = run() {
@@ -21,6 +21,11 @@ fn run() -> Result<()> {
 
     match cli.command {
         Some(Command::Add { name }) => commands::add::run(&name),
+        Some(Command::Base { action }) => match action {
+            Some(BaseAction::Show) => commands::base::show(),
+            Some(BaseAction::Rm) => commands::base::remove(),
+            None => commands::base::edit(),
+        },
         Some(Command::Ls) => commands::list::run(),
         Some(Command::Rm { name }) => commands::remove::run(&name),
         Some(Command::Show { name }) => commands::show::run(name.as_deref()),
