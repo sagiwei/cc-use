@@ -6,8 +6,9 @@ use crate::config;
 pub fn run(name: Option<&str>) -> Result<()> {
     let resolved_name = match name {
         Some(n) => n.to_string(),
-        None => config::current_config()?
-            .ok_or_else(|| anyhow::anyhow!("no active configuration. Specify a name or switch to one first."))?,
+        None => config::current_config()?.ok_or_else(|| {
+            anyhow::anyhow!("no active configuration. Specify a name or switch to one first.")
+        })?,
     };
 
     let path = config::config_path(&resolved_name)?;

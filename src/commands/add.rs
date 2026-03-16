@@ -8,7 +8,11 @@ pub fn run(name: &str) -> Result<()> {
     config::ensure_init()?;
 
     if config::config_exists(name)? {
-        bail!("configuration '{}' already exists. Use 'cc-use edit {}' to modify it.", name, name);
+        bail!(
+            "configuration '{}' already exists. Use 'cc-use edit {}' to modify it.",
+            name,
+            name
+        );
     }
 
     let path = config::config_path(name)?;

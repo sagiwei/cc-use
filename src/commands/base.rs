@@ -8,7 +8,7 @@ pub fn edit() -> Result<()> {
     config::ensure_init()?;
 
     let path = config::base_config_path()?;
-    
+
     // Create empty file if doesn't exist
     if !path.exists() {
         std::fs::write(&path, "{}\n")?;

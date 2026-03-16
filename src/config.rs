@@ -89,8 +89,8 @@ pub fn load_base_config() -> Result<Option<Value>> {
         return Ok(None);
     }
 
-    let content = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let content =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
     let value: Value = serde_json::from_str(&content)
         .with_context(|| format!("invalid JSON in {}", path.display()))?;
     Ok(Some(value))
@@ -103,8 +103,8 @@ pub fn load_config(name: &str) -> Result<Value> {
         bail!("configuration '{}' does not exist", name);
     }
 
-    let content = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let content =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
     let value: Value = serde_json::from_str(&content)
         .with_context(|| format!("invalid JSON in {}", path.display()))?;
     Ok(value)
@@ -134,7 +134,7 @@ pub fn merge_json(base: &Value, overlay: &Value) -> Value {
 /// Returns the merged configuration, or just the named config if no base exists.
 pub fn get_merged_config(name: &str) -> Result<Value> {
     let config = load_config(name)?;
-    
+
     match load_base_config()? {
         Some(base) => Ok(merge_json(&base, &config)),
         None => Ok(config),
@@ -159,15 +159,9 @@ pub fn switch_to(name: &str) -> Result<()> {
         } else {
             let backup = settings.with_extension("json.bak");
             fs::rename(&settings, &backup).with_context(|| {
-                format!(
-                    "failed to backup settings.json to {}",
-                    backup.display()
-                )
+                format!("failed to backup settings.json to {}", backup.display())
             })?;
-            eprintln!(
-                "Backed up existing settings.json to {}",
-                backup.display()
-            );
+            eprintln!("Backed up existing settings.json to {}", backup.display());
         }
     }
 
@@ -288,7 +282,10 @@ mod tests {
 
         let result = merge_json(&base, &overlay);
 
-        assert_eq!(result["level1"]["level2"]["level3"]["deep_key"], "overridden");
+        assert_eq!(
+            result["level1"]["level2"]["level3"]["deep_key"],
+            "overridden"
+        );
         assert_eq!(result["level1"]["level2"]["level3"]["another"], "kept");
         assert_eq!(result["level1"]["level2"]["new_key"], "new_value");
     }
@@ -387,9 +384,15 @@ mod tests {
         // Provider API key overrides base
         assert_eq!(result["env"]["ANTHROPIC_API_KEY"], "sk-deepseek-xxxx");
         // Provider adds BASE_URL
-        assert_eq!(result["env"]["ANTHROPIC_BASE_URL"], "https://api.deepseek.com");
+        assert_eq!(
+            result["env"]["ANTHROPIC_BASE_URL"],
+            "https://api.deepseek.com"
+        );
         // Base permissions preserved
-        assert_eq!(result["permissions"]["allow"], json!(["Bash(npm run:*)", "Bash(cargo:*)"]));
+        assert_eq!(
+            result["permissions"]["allow"],
+            json!(["Bash(npm run:*)", "Bash(cargo:*)"])
+        );
         // Provider adds model
         assert_eq!(result["model"], "claude-3-5-sonnet");
         // Base setting preserved
